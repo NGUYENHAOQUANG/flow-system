@@ -26,10 +26,10 @@ export class FlowPage extends BasePage {
     console.log("Đã tìm thấy ô nhập liệu, tiến hành gõ chữ...");
     // Phải click vào ô contenteditable trước khi gõ
     await editor.click();
-    await editor.sendKeys(prompt);
+    await editor.sendKeys(prompt + " "); // Thêm dấu cách để Slate.js kịp nhận diện text
     
-    // Đợi 1 giây để nút Tạo sáng lên
-    await this.driver.sleep(1000);
+    // Đợi 2 giây để Slate.js cập nhật state nội bộ và nút Tạo sáng lên
+    await this.driver.sleep(2000);
     
     // Tìm nút Tạo (biểu tượng mũi tên arrow_forward)
     try {

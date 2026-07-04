@@ -26,7 +26,7 @@ export class WorkerSocketClient {
 
     this.socket.on('job:dispatch', async (job) => {
       console.log(`Received Job ID: ${job.id}`);
-      const maxRetries = 2;
+      const maxRetries = 1; // Giảm xuống 1 để không bị tạo video 2 lần nếu có lỗi tải xuống
       let attempt = 0;
       let success = false;
 
