@@ -33,12 +33,18 @@ export class FlowPage extends BasePage {
     
     // Tìm nút Tạo (biểu tượng mũi tên arrow_forward)
     try {
-        const btnLocator = By.xpath('//button[.//i[contains(text(), "arrow_forward")]] | //button[.//span[text()="Tạo"]]');
-        const btn = await this.driver.findElement(btnLocator);
-        await btn.click();
-        console.log("Đã bấm nút Tạo video!");
+        // Tìm tất cả các nút có icon arrow_forward (tránh bấm nhầm nút "Tạo" ở menu bên trái)
+        const btns = await this.driver.findElements(By.xpath('//button[.//i[text()="arrow_forward"]]'));
+        if (btns.length > 0) {
+            // Nút gửi của khung chat thường nằm ở cuối cùng trong mã HTML
+            await btns[btns.length - 1].click();
+            console.log("Đã bấm nút mũi tên Tạo video!");
+        } else {
+            console.log("Không tìm thấy nút mũi tên, thử dùng phím Enter...");
+            await editor.sendKeys(Key.ENTER);
+        }
     } catch(e) {
-        console.log("Không tìm thấy nút Tạo, thử dùng phím Enter...");
+        console.log("Lỗi khi bấm nút, thử dùng phím Enter...");
         await editor.sendKeys(Key.ENTER);
     }
   }
