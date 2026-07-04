@@ -1,6 +1,6 @@
 import { BasePage } from './base.page';
 import { FlowLocators } from '../locators/flow.locators';
-import { WebDriver } from 'selenium-webdriver';
+import { WebDriver, Key, By } from 'selenium-webdriver';
 
 export class FlowPage extends BasePage {
   constructor(driver: WebDriver) {
@@ -8,15 +8,39 @@ export class FlowPage extends BasePage {
   }
 
   async navigateToFlow() {
-    await this.driver.get('https://labs.google/fx/tools/flow');
+    await this.driver.get('https://labs.google/fx/vi/tools/flow/project/fd159876-1336-4135-a1d9-c68eb7ee3eb0');
     // Chờ cho đến khi khung nhập prompt xuất hiện để chắc chắn đã vào đúng trang
     await this.waitForElement(FlowLocators.PROMPT_INPUT, 30000);
   }
 
   async generateVideo(prompt: string) {
     console.log(`Entering prompt: ${prompt}`);
-    await this.type(FlowLocators.PROMPT_INPUT, prompt);
-    await this.click(FlowLocators.GENERATE_BTN);
+    
+    // Đợi 2 giây cho UI load xong hoàn toàn
+    await this.driver.sleep(2000);
+    
+    // Tìm ô nhập liệu của Google Flow (sử dụng Slate editor)
+    const editorLocator = By.css('[data-slate-editor="true"], [role="textbox"]');
+    const editor = await this.waitForElement(editorLocator, 30000);
+    
+    console.log("Đã tìm thấy ô nhập liệu, tiến hành gõ chữ...");
+    // Phải click vào ô contenteditable trước khi gõ
+    await editor.click();
+    await editor.sendKeys(prompt);
+    
+    // Đợi 1 giây để nút Tạo sáng lên
+    await this.driver.sleep(1000);
+    
+    // Tìm nút Tạo (biểu tượng mũi tên arrow_forward)
+    try {
+        const btnLocator = By.xpath('//button[.//i[contains(text(), "arrow_forward")]] | //button[.//span[text()="Tạo"]]');
+        const btn = await this.driver.findElement(btnLocator);
+        await btn.click();
+        console.log("Đã bấm nút Tạo video!");
+    } catch(e) {
+        console.log("Không tìm thấy nút Tạo, thử dùng phím Enter...");
+        await editor.sendKeys(Key.ENTER);
+    }
   }
 
   async waitForVideoAndDownload() {

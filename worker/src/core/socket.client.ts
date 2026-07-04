@@ -53,6 +53,13 @@ export class WorkerSocketClient {
     this.socket.on('disconnect', () => {
       console.log('Disconnected from Backend');
     });
+
+    this.socket.on('job:created', () => {
+      if (this.currentJobId === null) {
+        console.log('New job available, requesting dispatch...');
+        this.socket.emit('worker:ready');
+      }
+    });
   }
 
   private async processJob(job: any) {

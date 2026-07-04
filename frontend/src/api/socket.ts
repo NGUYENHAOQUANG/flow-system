@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 import { useJobStore } from '../store/useJobStore';
 
-export const socket = io('http://localhost:3000', {
+export const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
   transports: ['websocket'],
 });
 
