@@ -60,14 +60,17 @@ let JobsService = JobsService_1 = class JobsService {
         this.db = db;
     }
     async createJob(data) {
-        const [newJob] = await this.db.insert(schema.jobs).values({
+        const [newJob] = await this.db
+            .insert(schema.jobs)
+            .values({
             userId: 1,
             prompt: data.prompt,
             model: data.model || 'flow-ultra',
             duration: data.duration || '5s',
             aspectRatio: data.aspectRatio || '16:9',
             status: 'WAITING',
-        }).returning();
+        })
+            .returning();
         this.logger.log(`Created Job ID: ${newJob.id}`);
         this.queue.push(newJob);
         return newJob;
@@ -77,19 +80,48 @@ let JobsService = JobsService_1 = class JobsService {
             return null;
         }
         const job = this.queue.shift();
+        if (!job)
+            return null;
         this.logger.log(`Dispatched Job ID: ${job.id}`);
         await this.updateJobStatus(job.id, 'RUNNING');
         return job;
     }
     async updateJobStatus(id, status) {
-        const [updated] = await this.db.update(schema.jobs)
+        const [updated] = await this.db
+            .update(schema.jobs)
             .set({ status, updatedAt: new Date() })
             .where((0, drizzle_orm_1.eq)(schema.jobs.id, id))
             .returning();
         return updated;
     }
     async getAllJobs() {
-        return this.db.select().from(schema.jobs).orderBy(schema.jobs.createdAt);
+        const rows = await this.db
+            .select({
+            id: schema.jobs.id,
+            userId: schema.jobs.userId,
+            workerId: schema.jobs.workerId,
+            status: schema.jobs.status,
+            prompt: schema.jobs.prompt,
+            negativePrompt: schema.jobs.negativePrompt,
+            model: schema.jobs.model,
+            duration: schema.jobs.duration,
+            aspectRatio: schema.jobs.aspectRatio,
+            priority: schema.jobs.priority,
+            createdAt: schema.jobs.createdAt,
+            updatedAt: schema.jobs.updatedAt,
+            videoUrl: schema.jobFiles.url,
+        })
+            .from(schema.jobs)
+            .leftJoin(schema.jobFiles, (0, drizzle_orm_1.eq)(schema.jobs.id, schema.jobFiles.jobId))
+            .orderBy(schema.jobs.createdAt);
+        return rows;
+    }
+    async saveJobVideoUrl(jobId, url) {
+        await this.db.insert(schema.jobFiles).values({
+            jobId,
+            fileType: 'video/mp4',
+            url,
+        });
     }
 };
 exports.JobsService = JobsService;

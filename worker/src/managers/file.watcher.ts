@@ -17,7 +17,8 @@ export class FileWatcher {
 
   startWatching() {
     // Chokidar theo dõi sự kiện file mp4 mới được tạo/hoàn tất tải về
-    const watcher = chokidar.watch(path.join(this.downloadDir, '*.mp4'), {
+    // Lưu ý: Trên Windows không nên truyền glob pattern (/*.mp4) trực tiếp vì lỗi backslash
+    const watcher = chokidar.watch(this.downloadDir, {
       persistent: true,
       ignoreInitial: true,
       awaitWriteFinish: {
@@ -27,6 +28,9 @@ export class FileWatcher {
     });
 
     watcher.on('add', async (filePath) => {
+      // Chỉ xử lý file video đuôi .mp4
+      if (!filePath.toLowerCase().endsWith('.mp4')) return;
+      
       console.log(`Video downloaded: ${filePath}`);
       
       try {
@@ -68,8 +72,13 @@ export class FileWatcher {
       console.error('Video downloaded but no active job found!');
       return;
     }
-    
-    const finalVideoUrl = `https://${process.env.R2_PUBLIC_DOMAIN || 'your-public-r2-domain.com'}/${fileName}`;
+    const domain = process.env.R2_PUBLIC_DOMAIN;
+    if (!domain) {
+      console.error('Lỗi: Chưa cấu hình R2_PUBLIC_DOMAIN trong file .env của Worker!');
+      return;
+    }
+    const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+    const finalVideoUrl = `${baseUrl.replace(/\/$/, '')}/${fileName}`;
 
     this.socketClient.reportJobCompleted(jobId, finalVideoUrl);
   }

@@ -15,8 +15,8 @@ export declare class JobsController {
             duration: string;
             id: number;
             createdAt: Date;
-            status: string;
             userId: number;
+            status: string;
             workerId: number | null;
             prompt: string;
             negativePrompt: string | null;
@@ -41,6 +41,7 @@ export declare class JobsController {
             priority: number;
             createdAt: Date;
             updatedAt: Date;
+            videoUrl: string | null;
         }[];
     }>;
 }

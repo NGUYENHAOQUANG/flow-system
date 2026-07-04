@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { BrowserService } from './core/browser.service';
 import { FlowPage } from './pages/flow.page';
 import { WorkerSocketClient } from './core/socket.client';

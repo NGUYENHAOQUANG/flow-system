@@ -37,9 +37,12 @@ let JobsGateway = JobsGateway_1 = class JobsGateway {
             await this.jobsService.updateJobStatus(jobId, 'WAITING');
             this.activeWorkers.delete(client.id);
             const jobs = await this.jobsService.getAllJobs();
-            const crashedJob = jobs.find(j => j.id === jobId);
+            const crashedJob = jobs.find((j) => j.id === jobId);
             if (crashedJob) {
-                this.server.emit('job:update_status', { jobId: crashedJob.id, status: 'WAITING' });
+                this.server.emit('job:update_status', {
+                    jobId: crashedJob.id,
+                    status: 'WAITING',
+                });
             }
         }
     }
@@ -49,7 +52,10 @@ let JobsGateway = JobsGateway_1 = class JobsGateway {
         if (job) {
             this.activeWorkers.set(client.id, job.id);
             client.emit('job:dispatch', job);
-            this.server.emit('job:update_status', { jobId: job.id, status: 'RUNNING' });
+            this.server.emit('job:update_status', {
+                jobId: job.id,
+                status: 'RUNNING',
+            });
         }
     }
     async handleWorkerStatusUpdate(data) {
@@ -61,7 +67,12 @@ let JobsGateway = JobsGateway_1 = class JobsGateway {
         this.logger.log(`Job ${data.jobId} completed. URL: ${data.videoUrl}`);
         await this.jobsService.updateJobStatus(data.jobId, 'COMPLETED');
         this.activeWorkers.delete(client.id);
-        this.server.emit('job:update_status', { jobId: data.jobId, status: 'COMPLETED', videoUrl: data.videoUrl });
+        await this.jobsService.saveJobVideoUrl(data.jobId, data.videoUrl);
+        this.server.emit('job:update_status', {
+            jobId: data.jobId,
+            status: 'COMPLETED',
+            videoUrl: data.videoUrl,
+        });
     }
 };
 exports.JobsGateway = JobsGateway;

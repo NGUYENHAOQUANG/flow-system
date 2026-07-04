@@ -14,8 +14,8 @@ export declare class JobsService {
         duration: string;
         id: number;
         createdAt: Date;
-        status: string;
         userId: number;
+        status: string;
         workerId: number | null;
         prompt: string;
         negativePrompt: string | null;
@@ -24,7 +24,20 @@ export declare class JobsService {
         priority: number;
         updatedAt: Date;
     }>;
-    getNextJob(): Promise<any>;
+    getNextJob(): Promise<{
+        duration: string;
+        id: number;
+        createdAt: Date;
+        userId: number;
+        status: string;
+        workerId: number | null;
+        prompt: string;
+        negativePrompt: string | null;
+        model: string;
+        aspectRatio: string;
+        priority: number;
+        updatedAt: Date;
+    } | null>;
     updateJobStatus(id: number, status: string): Promise<{
         id: number;
         userId: number;
@@ -52,5 +65,7 @@ export declare class JobsService {
         priority: number;
         createdAt: Date;
         updatedAt: Date;
+        videoUrl: string | null;
     }[]>;
+    saveJobVideoUrl(jobId: number, url: string): Promise<void>;
 }
