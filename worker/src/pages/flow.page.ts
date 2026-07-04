@@ -3,17 +3,37 @@ import { FlowLocators } from '../locators/flow.locators';
 import { WebDriver, Key, By } from 'selenium-webdriver';
 
 export class FlowPage extends BasePage {
+  private previousVideoSrcs: string[] = [];
+
   constructor(driver: WebDriver) {
     super(driver);
   }
 
   async navigateToFlow() {
-    await this.driver.get('https://labs.google/fx/vi/tools/flow/project/fd159876-1336-4135-a1d9-c68eb7ee3eb0');
+    const targetUrl = 'https://labs.google/fx/vi/tools/flow/project/fd159876-1336-4135-a1d9-c68eb7ee3eb0';
+    const currentUrl = await this.driver.getCurrentUrl();
+    
+    // Chỉ tải lại trang nếu chưa ở đúng trang project này
+    if (!currentUrl.includes('fd159876-1336-4135-a1d9-c68eb7ee3eb0')) {
+        await this.driver.get(targetUrl);
+        // Đợi 5 giây để toàn bộ danh sách video cũ load xong
+        await this.driver.sleep(5000);
+    }
+    
     // Chờ cho đến khi khung nhập prompt xuất hiện để chắc chắn đã vào đúng trang
     await this.waitForElement(FlowLocators.PROMPT_INPUT, 30000);
   }
 
   async generateVideo(prompt: string) {
+    // Lưu lại toàn bộ danh sách src của các video ĐÃ CÓ trên trang để làm mốc so sánh
+    this.previousVideoSrcs = await this.driver.executeScript(`
+        const ObjectURLRegex = /^blob:/;
+        const videos = document.querySelectorAll('video');
+        return Array.from(videos)
+            .map(v => v.getAttribute('src'))
+            .filter(src => src && !ObjectURLRegex.test(src)); // Bỏ qua các blob url nếu có
+    `);
+
     console.log(`Entering prompt: ${prompt}`);
     
     // Đợi 2 giây cho UI load xong hoàn toàn
@@ -51,9 +71,61 @@ export class FlowPage extends BasePage {
 
   async waitForVideoAndDownload() {
     console.log('Waiting for generation to complete (this might take a while)...');
-    // Tăng thời gian chờ lên mức cao vì tạo video rất lâu (vd: 5 phút = 300000ms)
-    await this.waitForElement(FlowLocators.VIDEO_RESULT_CONTAINER, 300000);
-    console.log('Video generated. Clicking download...');
-    await this.click(FlowLocators.DOWNLOAD_BTN);
+    
+    let newSrc = null;
+    let attempts = 0;
+    while (attempts < 300) { // Đợi tối đa 5 phút
+        newSrc = await this.driver.executeScript(`
+            const previousSrcs = arguments[0];
+            const videos = document.querySelectorAll('video');
+            for (let v of videos) {
+                const src = v.getAttribute('src');
+                // Nếu tìm thấy một video có src hợp lệ và CHƯA TỪNG tồn tại trong danh sách cũ
+                if (src && !src.startsWith('blob:') && !previousSrcs.includes(src)) {
+                    return src;
+                }
+            }
+            return null;
+        `, this.previousVideoSrcs);
+        
+        if (newSrc) {
+            break;
+        }
+        await this.driver.sleep(1000);
+        attempts++;
+    }
+    
+    if (!newSrc) {
+        throw new Error("Timeout: Không thấy video mới được tạo ra sau 5 phút!");
+    }
+    
+    console.log('Video generated. Tự động tải video thông qua Javascript...');
+    
+    // Ép trình duyệt fetch URL của video và ép tải xuống bằng thẻ <a>
+    const downloadSuccess = await this.driver.executeAsyncScript(`
+        const url = arguments[0];
+        const callback = arguments[1];
+        
+        fetch(url)
+            .then(res => res.blob())
+            .then(blob => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'flow_video_' + Date.now() + '.mp4';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                callback(true);
+            })
+            .catch(err => {
+                console.error("Lỗi khi fetch video:", err);
+                callback(false);
+            });
+    `, newSrc);
+    
+    if (!downloadSuccess) {
+        throw new Error("Không thể tải video về máy! Có thể do lỗi mạng hoặc CORS.");
+    }
+    console.log('Đã phát lệnh tải video thành công!');
   }
 }
