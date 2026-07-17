@@ -6,7 +6,7 @@ import { WorkerSocketClient } from '../core/socket.client';
 
 export class FileWatcher {
   private downloadDir: string;
-  private backendApiUrl = 'http://localhost:3000';
+  private backendApiUrl = process.env.BACKEND_API_URL || '';
 
   constructor(private socketClient: WorkerSocketClient) {
     // Thư mục tải xuống của Chrome trên Windows
@@ -28,26 +28,35 @@ export class FileWatcher {
     });
 
     watcher.on('add', async (filePath) => {
-      // Chỉ xử lý file video đuôi .mp4
-      if (!filePath.toLowerCase().endsWith('.mp4')) return;
+      const ext = path.extname(filePath).toLowerCase();
+      const isVideo = ext === '.mp4';
+      const isImage = ['.png', '.jpg', '.jpeg', '.webp'].includes(ext);
+
+      if (!isVideo && !isImage) return;
       
-      console.log(`Video downloaded: ${filePath}`);
+      console.log(`File downloaded: ${filePath}`);
       
       try {
-        await this.handleNewVideo(filePath);
+        await this.handleNewFile(filePath);
       } catch (err) {
-        console.error('Error handling downloaded video:', err);
+        console.error('Error handling downloaded file:', err);
       }
     });
   }
 
-  private async handleNewVideo(filePath: string) {
+  private async handleNewFile(filePath: string) {
     const fileName = path.basename(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+    
+    let fileType = 'video/mp4';
+    if (ext === '.png') fileType = 'image/png';
+    else if (ext === '.webp') fileType = 'image/webp';
+    else if (ext === '.jpg' || ext === '.jpeg') fileType = 'image/jpeg';
     
     // 1. Gọi Backend lấy presigned url
-    console.log('Requesting presigned URL...');
+    console.log(`Requesting presigned URL for ${fileType}...`);
     const presignedRes = await axios.get(`${this.backendApiUrl}/storage/presigned-url`, {
-      params: { fileName, fileType: 'video/mp4' },
+      params: { fileName, fileType },
     });
 
     if (!presignedRes.data.success) {
@@ -56,10 +65,10 @@ export class FileWatcher {
     const uploadUrl = presignedRes.data.url;
 
     // 2. Upload file lên R2
-    console.log(`Uploading ${fileName} to R2...`);
+    console.log(`Uploading ${fileName} to R2 with Content-Type: ${fileType}...`);
     const fileBuffer = fs.readFileSync(filePath);
     await axios.put(uploadUrl, fileBuffer, {
-      headers: { 'Content-Type': 'video/mp4' },
+      headers: { 'Content-Type': fileType },
     });
     console.log('Upload successful!');
 
@@ -69,17 +78,10 @@ export class FileWatcher {
     // 4. Tìm JobID hiện tại
     const jobId = this.socketClient.getCurrentJobId();
     if (!jobId) {
-      console.error('Video downloaded but no active job found!');
+      console.error('File downloaded but no active job found!');
       return;
     }
-    const domain = process.env.R2_PUBLIC_DOMAIN;
-    if (!domain) {
-      console.error('Lỗi: Chưa cấu hình R2_PUBLIC_DOMAIN trong file .env của Worker!');
-      return;
-    }
-    const baseUrl = domain.startsWith('http') ? domain : `https://${domain}`;
-    const finalVideoUrl = `${baseUrl.replace(/\/$/, '')}/${fileName}`;
-
-    this.socketClient.reportJobCompleted(jobId, finalVideoUrl);
+    // Chỉ gửi tên file (chuẩn cho prod) thay vì full URL
+    this.socketClient.reportFileUploaded(jobId, fileName);
   }
 }

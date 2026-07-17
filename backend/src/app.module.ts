@@ -1,12 +1,21 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { DbModule } from './db/db.module';
-import { JobsModule } from './jobs/jobs.module';
-import { StorageModule } from './storage/storage.module';
+import { JobsModule } from '@/modules/jobs/jobs.module';
+import { StorageModule } from '@/modules/storage/storage.module';
+
+import { ConfigModule } from '@nestjs/config';
+import { validate } from '@/config/env.validation';
 
 @Module({
-  imports: [DbModule, JobsModule, StorageModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate,
+    }),
+    JobsModule, 
+    StorageModule
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

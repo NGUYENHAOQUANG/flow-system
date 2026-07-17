@@ -33,11 +33,12 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
 const node_postgres_1 = require("drizzle-orm/node-postgres");
 const pg_1 = require("pg");
 const schema = __importStar(require("./src/db/schema"));
 async function main() {
-    const connectionString = 'postgres://postgres:Quang123%40@localhost:5432/flow_db';
+    const connectionString = process.env.DATABASE_URL;
     const pool = new pg_1.Pool({ connectionString });
     const db = (0, node_postgres_1.drizzle)(pool, { schema });
     console.log('Seeding mock user...');
@@ -50,7 +51,7 @@ async function main() {
         console.log('Done!');
     }
     catch (e) {
-        console.log('User might already exist or error:', e.message);
+        console.log('User might already exist or error:', e);
     }
     process.exit(0);
 }

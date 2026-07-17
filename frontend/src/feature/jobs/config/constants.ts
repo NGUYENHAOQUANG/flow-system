@@ -1,0 +1,6 @@
+export const JOB_STATUS = {
+  WAITING: 'WAITING',
+  RUNNING: 'RUNNING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED'
+} as const;

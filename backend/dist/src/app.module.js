@@ -10,15 +10,23 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
-const db_module_1 = require("./db/db.module");
-const jobs_module_1 = require("./jobs/jobs.module");
-const storage_module_1 = require("./storage/storage.module");
+const jobs_module_1 = require("./modules/jobs/jobs.module");
+const storage_module_1 = require("./modules/storage/storage.module");
+const config_1 = require("@nestjs/config");
+const env_validation_1 = require("./config/env.validation");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [db_module_1.DbModule, jobs_module_1.JobsModule, storage_module_1.StorageModule],
+        imports: [
+            config_1.ConfigModule.forRoot({
+                isGlobal: true,
+                validate: env_validation_1.validate,
+            }),
+            jobs_module_1.JobsModule,
+            storage_module_1.StorageModule
+        ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
     })

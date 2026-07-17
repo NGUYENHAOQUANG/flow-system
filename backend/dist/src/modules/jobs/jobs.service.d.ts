@@ -1,0 +1,87 @@
+import { ConfigService } from '@nestjs/config';
+export declare class JobsService {
+    private readonly configService;
+    private readonly logger;
+    private queue;
+    constructor(configService: ConfigService);
+    createJob(data: {
+        prompt: string;
+        model?: string;
+        duration?: string;
+        aspectRatio?: string;
+        quantity?: string;
+        tab?: string;
+        type?: string;
+        imageUrls?: string[];
+    }): Promise<{
+        imageUrls: string[];
+        duration: string;
+        id: number;
+        createdAt: Date;
+        status: string;
+        userId: number;
+        workerId: number | null;
+        prompt: string;
+        negativePrompt: string | null;
+        model: string;
+        aspectRatio: string;
+        quantity: string;
+        tab: string;
+        type: string;
+        priority: number;
+        updatedAt: Date;
+    }>;
+    getNextJob(): Promise<{
+        duration: string;
+        id: number;
+        createdAt: Date;
+        status: string;
+        userId: number;
+        workerId: number | null;
+        prompt: string;
+        negativePrompt: string | null;
+        model: string;
+        aspectRatio: string;
+        quantity: string;
+        tab: string;
+        type: string;
+        priority: number;
+        updatedAt: Date;
+    } | null>;
+    updateJobStatus(id: number, status: string): Promise<{
+        id: number;
+        userId: number;
+        workerId: number | null;
+        status: string;
+        prompt: string;
+        negativePrompt: string | null;
+        model: string;
+        duration: string;
+        aspectRatio: string;
+        quantity: string;
+        tab: string;
+        type: string;
+        priority: number;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    getAllJobs(): Promise<{
+        videoUrl: string | null;
+        id: number;
+        userId: number;
+        workerId: number | null;
+        status: string;
+        prompt: string;
+        negativePrompt: string | null;
+        model: string;
+        duration: string;
+        aspectRatio: string;
+        quantity: string;
+        tab: string;
+        type: string;
+        priority: number;
+        createdAt: Date;
+        updatedAt: Date;
+    }[]>;
+    saveJobVideoUrl(jobId: number, url: string): Promise<void>;
+}

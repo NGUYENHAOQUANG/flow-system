@@ -1,16 +1,18 @@
 import { io, Socket } from 'socket.io-client';
-import { FlowPage } from '../pages/flow.page';
+import { FlowPage, type JobSettings } from '../pages/flow.page';
 import { BrowserService } from './browser.service';
 
 export class WorkerSocketClient {
   private socket: Socket;
   private currentJobId: number | null = null;
+  private expectedQuantity: number = 1;
+  private uploadedCount: number = 0;
 
   constructor(
     private browserService: BrowserService,
     private flowPage: FlowPage
   ) {
-    this.socket = io('http://localhost:3000', {
+    this.socket = io(process.env.BACKEND_API_URL || '', {
       transports: ['websocket'],
     });
 
@@ -69,20 +71,63 @@ export class WorkerSocketClient {
     // 1. Mở trang Google Flow Ultra
     await this.flowPage.navigateToFlow();
     
-    // 2. Nhập Prompt và Generate
-    await this.flowPage.generateVideo(job.prompt);
+    // 2. Áp dụng thông số (type, tab, aspectRatio, duration, model, quantity) từ job
+    const settings: JobSettings = {
+      type:        job.type        ?? 'video',
+      tab:         job.tab         ?? 'khung_hinh',
+      aspectRatio: job.aspectRatio ?? '16:9',
+      duration:    job.duration    ?? '8s',
+      model:       job.model       ?? 'Veo 3.1 - Lite',
+      quantity:    job.quantity    ?? '1x',
+    };
+    
+    // Đặt số lượng dự kiến
+    this.expectedQuantity = 1;
+    if (settings.quantity) {
+       const match = settings.quantity.match(/\d+/);
+       if (match) this.expectedQuantity = parseInt(match[0], 10);
+    }
+    this.uploadedCount = 0;
+
+    await this.flowPage.applySettings(settings);
+    
+    // 3. Đính kèm ảnh tham chiếu (nếu có) trước khi nhập prompt
+    if (job.imageUrls && job.imageUrls.length > 0) {
+      console.log(`[Worker] Job ${job.id} has ${job.imageUrls.length} reference image(s). Attaching...`);
+      await this.flowPage.attachImages(job.imageUrls);
+    }
+
+    // 4. Nhập Prompt và Generate
+    await this.flowPage.generateVideo(job.prompt, settings.type);
 
     this.socket.emit('worker:status_update', { jobId: job.id, status: 'RENDERING' });
 
-    // 3. Chờ video xong và bấm Download
-    await this.flowPage.waitForVideoAndDownload();
+    // 4. Chờ video/ảnh xong và bấm Download
+    await this.flowPage.waitForVideoAndDownload(job.prompt, this.expectedQuantity, settings.type);
 
     // Trong thực tế, lúc này FileManager (Chokidar) sẽ lắng nghe thư mục tải xuống 
     // và bắn sự kiện để upload lên S3. Tạm thời mô phỏng việc upload thành công.
     console.log(`Job ${job.id} completed. Waiting for File Watcher...`);
   }
 
-  // Được gọi bởi FileManager khi video upload xong
+  // Được gọi bởi FileManager khi 1 video upload xong
+  public reportFileUploaded(jobId: number, videoUrl: string) {
+    if (this.currentJobId !== jobId) return;
+    
+    this.uploadedCount++;
+    if (this.uploadedCount < this.expectedQuantity) {
+       this.socket.emit('worker:file_uploaded', { jobId, videoUrl });
+       console.log(`Reported file uploaded ${this.uploadedCount}/${this.expectedQuantity} for job ${jobId}.`);
+    } else {
+       // Nếu đã upload đủ, hoàn thành job
+       this.socket.emit('worker:job_completed', { jobId, videoUrl });
+       console.log(`Reported job ${jobId} as COMPLETED (${this.uploadedCount}/${this.expectedQuantity} files). Requesting next job...`);
+       this.currentJobId = null;
+       this.socket.emit('worker:ready');
+    }
+  }
+
+  // Tương thích ngược: Được gọi khi cần hoàn thành ngay lập tức
   public reportJobCompleted(jobId: number, videoUrl: string) {
     this.socket.emit('worker:job_completed', { jobId, videoUrl });
     console.log(`Reported job ${jobId} as COMPLETED. Requesting next job...`);

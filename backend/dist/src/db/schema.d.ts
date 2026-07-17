@@ -338,6 +338,63 @@ export declare const jobs: import("drizzle-orm/pg-core").PgTableWithColumns<{
         }, {}, {
             length: 50;
         }>;
+        quantity: import("drizzle-orm/pg-core").PgColumn<{
+            name: "quantity";
+            tableName: "jobs";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: 10;
+        }>;
+        tab: import("drizzle-orm/pg-core").PgColumn<{
+            name: "tab";
+            tableName: "jobs";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: 50;
+        }>;
+        type: import("drizzle-orm/pg-core").PgColumn<{
+            name: "type";
+            tableName: "jobs";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: 20;
+        }>;
         priority: import("drizzle-orm/pg-core").PgColumn<{
             name: "priority";
             tableName: "jobs";
